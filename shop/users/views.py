@@ -56,6 +56,8 @@ class LoginView(APIView):
             {
                 'token': token.key,
                 "username": user.username,
+                "email": user.email,
+                'is_staff':user.is_staff,
                 "EC": 0,
                 "EM": "Login succeed!"
             },
@@ -83,6 +85,7 @@ class RegisterView(APIView):
                 'user_id': user.id,
                 'username': user.username,
                 'email': user.email,
+                'is_staff': False,
                 "EC": 0,
                 "EM": "Register succeed!"
                     }, status=status.HTTP_201_CREATED)
