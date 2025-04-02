@@ -6,7 +6,7 @@ User = get_user_model()  # Lấy model user theo settings.AUTH_USER_MODEL
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']
+        fields = ['id', 'username', 'email', 'is_staff']
 
 
 class RegisterSerializer(serializers.ModelSerializer):

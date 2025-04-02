@@ -7,8 +7,25 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from .serializers import RegisterSerializer
 from django.contrib.auth import get_user_model
-
+from rest_framework import generics
+from .serializers import UserSerializer
+from rest_framework.permissions import AllowAny
 User = get_user_model()  # Lấy model user theo settings.AUTH_USER_MODEL
+
+
+class UserListView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [AllowAny]  # Cho phép tất cả truy cập API này  
+
+    def list(self, request, *args, **kwargs):
+        users = self.get_queryset()
+        serializer = self.get_serializer(users, many=True)
+        return Response({
+            "DT": serializer.data,
+            "EC": 0,
+            "EM": "GetAll list participants succeed"
+        })
 
 class LoginView(APIView):
     def post(self, request):
