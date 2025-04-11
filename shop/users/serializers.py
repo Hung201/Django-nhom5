@@ -4,8 +4,6 @@ from rest_framework import serializers
 User = get_user_model()  # Lấy model user theo settings.AUTH_USER_MODEL
 
 class UserSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(required=False, allow_null=True)
-    
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'is_staff', 'image']
