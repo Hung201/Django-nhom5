@@ -10,6 +10,9 @@ from django.contrib.auth import get_user_model
 from rest_framework import generics
 from .serializers import UserSerializer
 from rest_framework.permissions import AllowAny
+from .serializers import UserUpdateSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
+
 User = get_user_model()  # Lấy model user theo settings.AUTH_USER_MODEL
 
 
@@ -111,3 +114,76 @@ class RegisterView(APIView):
                 "EC": -1,
                 "EM": "Register failed!"
                     }, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class UserDeleteView(APIView):
+
+    def delete(self, request):
+        # Lấy user_id từ body của yêu cầu (x-www-form-urlencoded)
+        user_id = request.data.get('user_id')
+
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+                user.delete()
+                return Response({
+                    "DT": {"id": user_id},
+                    "EC": 0,
+                    "EM": "Delete the user succeed"
+                }, status=status.HTTP_200_OK)
+            except User.DoesNotExist:
+                return Response({
+                    "DT": None,
+                    "EC": 1,
+                    "EM": "User not found"
+                }, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({
+                "DT": None,
+                "EC": 1,
+                "EM": "user_id parameter is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class UserUpdateView(APIView):
+    permission_classes = [AllowAny]  # API có thể được gọi mà không cần token
+    parser_classes = [MultiPartParser, FormParser]  # Hỗ trợ upload file ảnh
+
+    def put(self, request):
+        user_id = request.data.get("id")  # Lấy id từ request body
+        if not user_id:
+            return Response({
+                "DT": None,
+                "EC": 1,
+                "EM": "User ID is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                "DT": None,
+                "EC": 1,
+                "EM": "User not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UserUpdateSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "DT": {
+                    "id": user.id,
+                    "email": user.email,
+                    "is_staff": user.is_staff,
+                    "image": user.image.url if user.image else None
+                },
+                "EC": 0,
+                "EM": "Update the user succeed"
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "DT": None,
+            "EC": 1,
+            "EM": "Update failed",
+            "Errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)

@@ -16,7 +16,7 @@ class Product(models.Model):
     
     name = models.CharField( max_length=100)
     sku = models.SlugField(blank=True,null=True)
-    image = models.ImageField(upload_to="img")
+    image = models.ImageField(upload_to='products_images/', blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     brand = models.CharField(max_length=15, choices=BRAND, blank=True, null=True)
@@ -26,14 +26,12 @@ class Product(models.Model):
         return self.name
     
     def save(self, *args, **kwargs):
-
         if not self.sku:
             self.sku = slugify(self.name)
             unique_sku = self.sku
             counter = 1
-            if Product.objects.filter(sku=unique_sku).exists():
+            while Product.objects.filter(sku=unique_sku).exists():
                 unique_sku = f'{self.sku}-{counter}'
-                counter +=1
+                counter += 1
             self.sku = unique_sku
-
-        super().save(args, **kwargs)        
+        super().save(*args, **kwargs)        
