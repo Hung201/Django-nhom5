@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from rest_framework.decorators import api_view
 from .models import Product
 from .serializers import ProductSerializer
@@ -8,6 +8,10 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 import logging
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib import messages
+from .utils import send_welcome_email
 
 # Create your views here.
 
@@ -121,3 +125,18 @@ class ProductDeleteView(APIView):
                 "EC": 1,
                 "EM": "Product not found"
             }, status=status.HTTP_404_NOT_FOUND)
+
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Gửi email chào mừng
+            send_welcome_email(user)
+            # Đăng nhập người dùng
+            login(request, user)
+            messages.success(request, 'Đăng ký thành công!')
+            return redirect('home')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})

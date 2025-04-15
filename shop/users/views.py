@@ -12,6 +12,7 @@ from .serializers import UserSerializer
 from rest_framework.permissions import AllowAny
 from .serializers import UserUpdateSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
+from shop_app.utils import send_welcome_email  # Import hàm gửi email
 
 User = get_user_model()  # Lấy model user theo settings.AUTH_USER_MODEL
 
@@ -95,25 +96,51 @@ class LogoutView(APIView):
 
     
 class RegisterView(APIView):
+    permission_classes = [AllowAny]  # Cho phép tất cả truy cập API này
+    parser_classes = [MultiPartParser, FormParser]  # Thêm parser classes
+
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        # Xử lý dữ liệu trước khi đưa vào serializer
+        data = request.data.copy()
+        
+        # Đảm bảo các trường undefined được set về giá trị mặc định
+        if data.get('is_staff') == 'undefined':
+            data['is_staff'] = False
+        if data.get('image') == 'undefined':
+            data['image'] = None
+            
+        print("Processed data:", data)  # Debug log
+        
+        serializer = RegisterSerializer(data=data)
         if serializer.is_valid():
-            user = serializer.save()
-            token, created = Token.objects.get_or_create(user=user)
-            return Response({
-                'token': token.key,
-                'user_id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'is_staff': False,
-                "EC": 0,
-                "EM": "Register succeed!"
-                    }, status=status.HTTP_201_CREATED)
+            try:
+                user = serializer.save()
+                # Gửi email chào mừng
+                send_welcome_email(user)
+                
+                token, created = Token.objects.get_or_create(user=user)
+                return Response({
+                    'token': token.key,
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'is_staff': user.is_staff,
+                    "EC": 0,
+                    "EM": "Register succeed!"
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                print("Error saving user:", str(e))  # Debug log
+                return Response({
+                    "EC": -1,
+                    "EM": f"Register failed: {str(e)}"
+                }, status=status.HTTP_400_BAD_REQUEST)
         else:
+            print("Validation errors:", serializer.errors)  # Debug log
             return Response({
                 "EC": -1,
-                "EM": "Register failed!"
-                    }, status=status.HTTP_400_BAD_REQUEST)
+                "EM": "Register failed!",
+                "Errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
         
 
 class UserDeleteView(APIView):

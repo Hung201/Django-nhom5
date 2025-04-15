@@ -12,23 +12,59 @@ class UserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, style={'input_type': 'password'})
     image = serializers.ImageField(required=False, allow_null=True)
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
+    city = serializers.CharField(required=False, allow_blank=True)
+    state = serializers.CharField(required=False, allow_blank=True)
+    address = serializers.CharField(required=False, allow_blank=True)
+    phone = serializers.CharField(required=False, allow_blank=True)
+    is_staff = serializers.BooleanField(default=False, required=False)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'is_staff', 'image']
+        fields = ['username', 'email', 'password', 'is_staff', 'image', 
+                 'first_name', 'last_name', 'city', 'state', 'address', 'phone']
+        extra_kwargs = {
+            'username': {'required': True},
+            'email': {'required': True},
+            'password': {'required': True},
+            'is_staff': {'default': False},
+        }
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username already exists")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already exists")
+        return value
 
     def create(self, validated_data):
-        image = validated_data.pop('image', None)  # Tránh lỗi nếu không có ảnh
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data.get('email', ''),
-            password=validated_data['password'],
-            is_staff=validated_data.get('is_staff', False)  # Mặc định False
-        )
-        if image:
-            user.image = image
-            user.save()
-        return user
+        try:
+            # Đảm bảo is_staff luôn là False
+            validated_data['is_staff'] = False
+            
+            image = validated_data.pop('image', None)
+            user = User.objects.create_user(
+                username=validated_data['username'],
+                email=validated_data.get('email', ''),
+                password=validated_data['password'],
+                is_staff=False,  # Luôn set là False
+                first_name=validated_data.get('first_name', ''),
+                last_name=validated_data.get('last_name', ''),
+                city=validated_data.get('city', ''),
+                state=validated_data.get('state', ''),
+                address=validated_data.get('address', ''),
+                phone=validated_data.get('phone', '')
+            )
+            if image:
+                user.image = image
+                user.save()
+            return user
+        except Exception as e:
+            raise serializers.ValidationError(str(e))
     
 
 
